@@ -7,10 +7,7 @@ use Behat\Mink\Session,
     Behat\Mink\Exception\DriverException,
     Behat\Mink\Exception\UnsupportedDriverActionException;
 
-use Selenium\Client as SeleniumClient,
-    Selenium\Locator as SeleniumLocator,
-    Selenium\Exception as SeleniumException,
-    WebDriver;
+use WebDriver;
 
 /*
  * This file is part of the Behat\Mink.
@@ -108,13 +105,13 @@ class Selenium2Driver implements DriverInterface
      *
      * @return  array
      */
-    protected static function getDefaultCapabilities()
+    public static function getDefaultCapabilities()
     {
         return array(
             'browserName'    => 'firefox',
-            'version'        => '8',
+            'version'        => '9',
             'platform'       => 'ANY',
-            'browserVersion' => '8',
+            'browserVersion' => '9',
             'browser'        => 'firefox'
         );
     }
@@ -473,7 +470,7 @@ class Selenium2Driver implements DriverInterface
 var node = {{ELEMENT}},
     tagName = node.tagName;
 
-if (tagName == "INPUT") {
+if (tagName == "INPUT" || "TEXTAREA" == tagName) {
     var type = node.getAttribute('type');
     if (type == "checkbox") {
         value = "boolean:" + node.checked;
@@ -492,8 +489,6 @@ if (tagName == "INPUT") {
     } else {
         value = "string:" + node.value;
     }
-} else if (tagName == "TEXTAREA") {
-  value = "string:" + node.text;
 } else if (tagName == "SELECT") {
     if (node.getAttribute('multiple')) {
         options = [];
@@ -512,7 +507,14 @@ if (tagName == "INPUT") {
         }
     }
 } else {
-  value = "string:" + node.getAttribute('value');
+    attributeValue = node.getAttribute('value');
+    if(attributeValue) {
+        value = "string:" + attributeValue;
+    } else if(node.value) {
+        value = "string:" + node.value;
+    } else {
+        return null;
+    }
 }
 
 return value;
@@ -520,7 +522,7 @@ JS;
 
         $value = $this->executeJsOnXpath($xpath, $script);
         if ($value) {
-            if (preg_match('/^string:(.*)$/', $value, $vars)) {
+            if (preg_match('/^string:(.*)$/ms', $value, $vars)) {
                 return $vars[1];
             }
             if (preg_match('/^boolean:(.*)$/', $value, $vars)) {
@@ -544,8 +546,16 @@ JS;
      */
     public function setValue($xpath, $value)
     {
-        $valueEscaped = str_replace('"', '\"', $value);
-        $this->executeJsOnXpath($xpath, '{{ELEMENT}}.value="'.$valueEscaped.'";');
+        $element = $this->wdSession->element('xpath', $xpath);
+        if (
+            strtolower($element->name()) != 'input' ||
+            strtolower($element->attribute('type')) != 'file'
+        )
+        {
+            $element->clear();
+        }
+
+        $element->value(array('value' => array($value)));
     }
 
     /**

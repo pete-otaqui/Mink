@@ -107,4 +107,25 @@ abstract class JavascriptDriverTest extends GeneralDriverTest
         $draggable->dragTo($droppable);
         $this->assertEquals('Dropped!', $droppable->find('css', 'p')->getText());
     }
+
+    public function testIssue193()
+    {
+        $session = $this->getSession();
+        $session->visit($this->pathTo('/issue193.html'));
+
+        $session->getPage()->selectFieldOption('options-without-values', 'Two');
+        $this->assertEquals('Two', $session->getPage()->findById('options-without-values')->getValue());
+
+        $session->getPage()->selectFieldOption('options-with-values', 'two');
+        $this->assertEquals('two', $session->getPage()->findById('options-with-values')->getValue());
+    }
+
+    public function testIssue225()
+    {
+        $this->getSession()->visit($this->pathTo('/issue225.php'));
+        $this->getSession()->getPage()->pressButton('Créer un compte');
+        $this->getSession()->wait(5000, '$("#panel").text() != ""');
+
+        $this->assertContains('OH AIH!', $this->getSession()->getPage()->getText());
+    }
 }

@@ -4,20 +4,24 @@ namespace Behat\Mink\PHPUnit;
 
 use Behat\Mink\Mink,
     Behat\Mink\Session,
+    Behat\Mink\Driver\Goutte\Client as GoutteClient,
     Behat\Mink\Driver\GoutteDriver,
     Behat\Mink\Driver\SahiDriver,
     Behat\Mink\Driver\ZombieDriver,
     Behat\Mink\Driver\SeleniumDriver,
     Behat\Mink\Driver\Selenium2Driver,
-    Behat\Mink\Driver\Zombie\Connection as ZombieConnection,
-    Behat\Mink\Driver\Zombie\Server as ZombieServer;
-
-use Goutte\Client as GoutteClient;
+    Behat\Mink\Driver\NodeJS\Server\ZombieServer,
+    Behat\Mink\Exception\ResponseTextException;
 
 use Selenium\Client as SeleniumClient;
 
 use Behat\SahiClient\Connection as SahiConnection,
     Behat\SahiClient\Client as SahiClient;
+
+use Behat\Mink\PHPUnit\Constraints\PageContains as PageContainsConstraint;
+
+require_once 'PHPUnit/Autoload.php';
+require_once 'PHPUnit/Framework/Assert/Functions.php';
 
 /*
  * This file is part of the Behat\Mink.
@@ -98,6 +102,29 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Checks, that page contains specified text
+     *
+     * @param Session $session
+     * @param string  $text     text to look for
+     * @param string  $message  optional message to show on fail
+     *
+     * @throws ResponseTextException
+     *
+     * @return void
+     */
+    public static function assertPageContainsText(Session $session, $text, $message = null)
+    {
+      $text = str_replace('\\"', '"', $text);
+      $haystack = $session->getPage()->getText();
+
+      $message = $message ?:
+        sprintf('The text "%s" was not found anywhere in the text of the page', $text);
+
+      $constraint = new PageContainsConstraint($text, false);
+      self::assertThat($haystack, $constraint, $message);
+    }
+
+    /**
      * Registers Mink sessions on it's initialization.
      *
      * @param   Behat\Mink\Mink     $mink   Mink manager instance
@@ -169,10 +196,12 @@ abstract class TestCase extends \PHPUnit_Framework_TestCase
     protected static function initZombieSession($host = '127.0.0.1', $port = 8124,
                                                 $autoServer = true, $nodeBin = 'node')
     {
-        $connection = new ZombieConnection($host, $port);
-        $server     = $autoServer ? new ZombieServer($host, $port, $nodeBin) : null;
+        $server = $autoServer ? new ZombieServer($host, $port, $nodeBin) : null;
+        if (null === $server) {
+            return new Session(new ZombieDriver($host, $port));
+        }
 
-        return new Session(new ZombieDriver($connection, $server, $autoServer));
+        return new Session(new ZombieDriver($server));
     }
 
     /**

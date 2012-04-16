@@ -15,11 +15,6 @@ class ZombieDriverTest extends JavascriptDriverTest
     }
 
     /**
-     * As of 0.10.1, zombie.js doesn't support any response type except html
-     */
-    public function testJson() {}
-
-    /**
      * As of 0.10.1, zombie.js doesn't support drag'n'drop
      */
     public function testDragDrop() {}
@@ -28,4 +23,9 @@ class ZombieDriverTest extends JavascriptDriverTest
      * No need in wait method for Zombie
      */
     public function testWait() {}
+
+    /**
+     * Zombie.js doesn't handle selects without values
+     */
+    public function testIssue193() {}
 }
